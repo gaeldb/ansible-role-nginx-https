@@ -1,0 +1,29 @@
+###############################################################################
+#
+# This ansible playbook deploys nginx HTTPS site with Letsencrypt cert
+#
+# How to use it:
+#  - ansible-playbook -i INVENTORY -e "target=host" deploy.yaml
+#
+################################################################################
+
+---
+
+- name: Deploy Nginx webserver
+  hosts: "{{ target }}"
+  become: yes
+
+  roles:
+    - nginx_https
+
+  vars:
+    # ACTIVE VARS:
+    domain_name: "test.skalab.fr"
+    domain_owner_mail: "gael@skalab.fr"
+    server_name_list_nginx: "test.skalab.fr"
+    #https_custom_conf: "myconf.conf.j2"
+
+    # COMING SOON:
+    # domain_alt_cn:
+    #   - '{{ domain_name }}'
+    #   - 'www.{{ domain_name }}'

@@ -1,0 +1,13 @@
+---
+
+- name: Install Nginx
+  ansible.builtin.include_tasks: nginx.yaml
+
+- name: Apply pending handlers
+  meta: flush_handlers
+
+- name: Generate certificate
+  ansible.builtin.include_tasks: certificate.yaml
+
+- name: Configure Nginx HTTPS
+  ansible.builtin.include_tasks: nginx_https.yaml

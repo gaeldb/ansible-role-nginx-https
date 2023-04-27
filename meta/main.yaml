@@ -1,0 +1,23 @@
+---
+dependencies: []
+
+galaxy_info:
+  role_name: nginx_https
+  author: gaeldb
+  description: Ansible role to deploy nginx HTTPS server with letsencrypt signed certificates
+  company: "Skalab"
+  license: "license (BSD, MIT)"
+  min_ansible_version: 2.9
+  platforms:
+    - name: Debian
+      versions:
+        - bullseye
+        - buster
+        - stretch
+  galaxy_tags:
+    - development
+    - system
+    - web
+    - nginx
+    - https
+    - debian

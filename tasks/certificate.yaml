@@ -1,0 +1,87 @@
+---
+
+- name: Install PyOpenSSL
+  ansible.builtin.apt:
+    name: python3-openssl
+    update_cache: yes
+
+- name: Generate RSA 4096 for letsencrypt account
+  openssl_privatekey:
+    path: /etc/ssl/private/acme.key
+    type: RSA
+    size: 4096
+
+- name: Make sure account exists and has given contacts. We agree to TOS.
+  acme_account:
+    acme_version: "{{ acme_version }}"
+    acme_directory: "{{ acme_directory }}"
+    account_key_src: /etc/ssl/private/acme.key
+    state: present
+    terms_agreed: yes
+    contact:
+    - "{{ acme_contact }}"
+
+- name: Generate RSA 4096 key for nginx
+  openssl_privatekey:
+    path: /etc/ssl/private/{{ domain_name }}.key
+    type: RSA
+    size: 4096
+
+- name: Create CSR
+  openssl_csr:
+    path: "/etc/ssl/certs/{{ domain_name }}.csr"
+    privatekey_path: "/etc/ssl/private/{{ domain_name }}.key"
+    common_name: '{{ domain_name }}'
+  #   subject_alt_name: "{{ item.value | map('regex_replace', '^', 'DNS:') | list }}"
+  # with_dict:
+  #   dns_server: '{{ domain_alt_cn }}'
+  register: csr
+
+- name: Set force ACME challenge when CSR has changed
+  ansible.builtin.set_fact:
+    force_acme: "{% if csr.changed %}true{% else %}false{% endif %}"
+
+- name: "Create ACME challenge (forced: {{ force_acme }})"
+  acme_certificate:
+    acme_version: "{{ acme_version }}"
+    acme_directory: "{{ acme_directory }}"
+    account_key_src: "/etc/ssl/private/acme.key"
+    csr: "/etc/ssl/certs/{{ domain_name }}.csr"
+    dest: "/etc/ssl/certs/{{ domain_name }}.crt"
+    fullchain_dest: "/etc/ssl/certs/{{ domain_name }}-fullchain.crt"
+    terms_agreed: yes
+    force: "{{ force_acme }}"
+  register: challenge
+
+- name: Create folder to store everything
+  file:
+    path: '/opt/acme/.well-known/acme-challenge'
+    state: directory
+    owner: www-data
+    group: www-data
+    recurse: yes
+    mode: 0755
+
+- name: Prepare ACME HTTP challenge
+  copy:
+    dest: "/opt/acme/{{ item['value']['http-01']['resource'] }}"
+    content: "{{ item['value']['http-01']['resource_value'] }}"
+    owner: www-data
+    group: www-data
+    mode: 0755
+  when: challenge is changed
+  with_dict: "{{ challenge['challenge_data'] }}"
+
+- name: "Validate ACME challenge (forced: {{ force_acme }})"
+  acme_certificate:
+    acme_version: "{{ acme_version }}"
+    acme_directory: "{{ acme_directory }}"
+    account_key_src: /etc/ssl/private/acme.key
+    csr: /etc/ssl/certs/{{ domain_name }}.csr
+    dest: /etc/ssl/certs/{{ domain_name }}.crt
+    fullchain_dest: /etc/ssl/certs/{{ domain_name }}-fullchain.crt
+    chain_dest: /etc/ssl/certs/{{ domain_name }}-intermediate.crt
+    data: "{{ challenge }}"
+    force: "{{ force_acme }}"
+  notify:
+    - Restart nginx

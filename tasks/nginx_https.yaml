@@ -1,0 +1,36 @@
+---
+
+- name: Configure default Nginx HTTPS
+  ansible.builtin.template:
+    src: https.conf.j2
+    dest: "/etc/nginx/sites-available/default-https.conf"
+  notify: Reload nginx
+
+- name: Enable default Nginx HTTPS
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/default-https.conf
+    dest: /etc/nginx/sites-enabled/default-https.conf
+    state: link
+  notify: Reload nginx
+  when: not https_custom_conf|bool
+
+- name: Disable default Nginx HTTPS
+  ansible.builtin.file:
+    dest: /etc/nginx/sites-enabled/default-https.conf
+    state: absent
+  notify: Reload nginx
+  when: https_custom_conf|bool
+
+- name: Configure custom Nginx HTTPS
+  ansible.builtin.template:
+    src: "{{ https_custom_conf }}"
+    dest: "/etc/nginx/sites-available/{{ domain_name }}.conf"
+  notify: Reload nginx
+  when: https_custom_conf|bool
+
+- name: Enable custom Nginx HTTPS
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/{{ domain_name }}.conf
+    dest: /etc/nginx/sites-enabled/{{ domain_name }}.conf
+    state: link
+  when: https_custom_conf|bool
