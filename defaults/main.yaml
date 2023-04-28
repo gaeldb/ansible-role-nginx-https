@@ -4,6 +4,3 @@
 acme_version: 2
 acme_directory: "https://acme-v02.api.letsencrypt.org/directory"
 acme_contact: "mailto:{{ domain_owner_mail }}"
-
-# Nginx HTTPS
-https_custom_conf: false
